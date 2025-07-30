@@ -177,30 +177,34 @@ export default function UmlDesigner({
           {elements.map((el) => (
             <Card
               key={el.id}
-              className="absolute w-64 shadow-lg cursor-grab"
+              className={`absolute w-64 cursor-grab ${el.type === 'namespace' ? 'border-dotted border-2 shadow-none bg-transparent' : 'shadow-lg'}`}
               style={{ left: `${el.position.x}px`, top: `${el.position.y}px` }}
               onMouseDown={(e) => handleMouseDown(e, el.id)}
               onTouchStart={(e) => handleTouchStart(e, el.id)}
             >
-              <CardHeader className="flex flex-row items-center justify-between p-4 bg-muted/50 rounded-t-lg">
+              <CardHeader className={`flex flex-row items-center justify-between ${el.type === 'namespace' ? 'p-2' : 'p-4 bg-muted/50 rounded-t-lg'}`}>
                 <Input
                   value={el.name}
                   onChange={(e) => updateElement(el.id, e.target.value, el.content)}
-                  className="text-md font-bold border-none focus-visible:ring-1"
+                  className={`text-md font-bold border-none focus-visible:ring-1 ${el.type === 'namespace' ? 'w-auto p-0' : ''}`}
                   onMouseDown={(e) => e.stopPropagation()} 
                 />
                 <Button variant="ghost" size="icon" onClick={() => deleteElement(el.id)} onMouseDown={(e) => e.stopPropagation()}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent className="p-4" onMouseDown={(e) => e.stopPropagation()}>
-                <Textarea
-                  placeholder={`- property: type\n+ method(): returnType`}
-                  value={el.content}
-                  onChange={(e) => updateElement(el.id, el.name, e.target.value)}
-                  className="font-code text-xs h-32 resize-none"
-                />
+              {el.type !== 'namespace' && (
+                <CardContent className="p-4" onMouseDown={(e) => e.stopPropagation()}>
+                  <Textarea
+                    placeholder={el.type === 'interface' 
+                      ? `+ method(): returnType\n+ anotherMethod(): void`
+                      : `- property: type\n+ method(): returnType`}
+                    value={el.content}
+                    onChange={(e) => updateElement(el.id, el.name, e.target.value)}
+                    className="font-code text-xs h-32 resize-none"
+                  />
               </CardContent>
+            )}
             </Card>
           ))}
         </CardContent>
