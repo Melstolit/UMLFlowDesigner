@@ -112,6 +112,40 @@ export default function UmlDesigner({
         setDraggingElement(null);
     };
 
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, id: string) => {
+        const element = elements.find(el => el.id === id);
+        const card = e.currentTarget;
+        if (element && card) {
+            const touch = e.touches[0];
+            const rect = card.getBoundingClientRect();
+            const offsetX = touch.clientX - rect.left;
+            const offsetY = touch.clientY - rect.top;
+            setDraggingElement({ id, offsetX, offsetY });
+        }
+        e.stopPropagation();
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (draggingElement) {
+            const touch = e.touches[0];
+            const canvasRect = e.currentTarget.getBoundingClientRect();
+            const newX = touch.clientX - canvasRect.left - draggingElement.offsetX;
+            const newY = touch.clientY - canvasRect.top - draggingElement.offsetY;
+
+            setElements(prevElements =>
+                prevElements.map(el =>
+                    el.id === draggingElement.id
+                    ? { ...el, position: { x: newX, y: newY } }
+                    : el
+                )
+            );
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setDraggingElement(null);
+    };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
       <Card className="lg:col-span-3 h-[75vh] flex flex-col">
@@ -123,6 +157,8 @@ export default function UmlDesigner({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {elements.map((el) => (
             <Card
@@ -130,6 +166,7 @@ export default function UmlDesigner({
               className="absolute w-64 shadow-lg cursor-grab"
               style={{ left: `${el.position.x}px`, top: `${el.position.y}px` }}
               onMouseDown={(e) => handleMouseDown(e, el.id)}
+              onTouchStart={(e) => handleTouchStart(e, el.id)}
             >
               <CardHeader className="flex flex-row items-center justify-between p-4 bg-muted/50 rounded-t-lg">
                 <Input
