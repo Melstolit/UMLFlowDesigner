@@ -1,5 +1,9 @@
-# Firebase Studio
+# UML Design with Flow viewer
 
 This is a NextJS starter in Firebase Studio.
 
-To get started, take a look at src/app/page.tsx.
+Updated by Jules bot.
+
+Approved by Github user Melstolit.
+
+Manually updated with github codespace.
