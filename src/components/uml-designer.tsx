@@ -1,6 +1,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from './ui/label';
-import React from 'react';
+
 
 interface UmlDesignerProps {
   elements: UmlElement[];
@@ -38,69 +39,110 @@ export default function UmlDesigner({
   relationships,
   setRelationships,
 }: UmlDesignerProps) {
-  const addElement = (type: UmlElement['type']) => {
-    const newElement: UmlElement = {
-      id: `${type}-${Date.now()}`,
-      type,
-      name: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
-      content: '',
-      position: { x: 50, y: 50 },
+    const [draggingElement, setDraggingElement] = React.useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+
+    const addElement = (type: UmlElement['type']) => {
+        const newElement: UmlElement = {
+        id: `${type}-${Date.now()}`,
+        type,
+        name: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+        content: '',
+        position: { x: 50, y: 50 },
+        };
+        setElements([...elements, newElement]);
     };
-    setElements([...elements, newElement]);
-  };
 
-  const updateElement = (id: string, newName: string, newContent: string) => {
-    setElements(
-      elements.map((el) =>
-        el.id === id ? { ...el, name: newName, content: newContent } : el
-      )
-    );
-  };
-
-  const deleteElement = (id: string) => {
-    setElements(elements.filter((el) => el.id !== id));
-    setRelationships(relationships.filter(rel => rel.from !== id && rel.to !== id));
-  };
-
-  const addRelationship = (from: string, to: string, type: Relationship['type']) => {
-    if (!from || !to || !type) return;
-    const newRelationship: Relationship = {
-      id: `rel-${Date.now()}`,
-      from,
-      to,
-      type,
+    const updateElement = (id: string, newName: string, newContent: string) => {
+        setElements(
+        elements.map((el) =>
+            el.id === id ? { ...el, name: newName, content: newContent } : el
+        )
+        );
     };
-    setRelationships([...relationships, newRelationship]);
-  };
 
-  const deleteRelationship = (id: string) => {
-    setRelationships(relationships.filter((rel) => rel.id !== id));
-  };
+    const deleteElement = (id: string) => {
+        setElements(elements.filter((el) => el.id !== id));
+        setRelationships(relationships.filter(rel => rel.from !== id && rel.to !== id));
+    };
+
+    const addRelationship = (from: string, to: string, type: Relationship['type']) => {
+        if (!from || !to || !type) return;
+        const newRelationship: Relationship = {
+        id: `rel-${Date.now()}`,
+        from,
+        to,
+        type,
+        };
+        setRelationships([...relationships, newRelationship]);
+    };
+
+    const deleteRelationship = (id: string) => {
+        setRelationships(relationships.filter((rel) => rel.id !== id));
+    };
   
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, id: string) => {
+        const element = elements.find(el => el.id === id);
+        const card = e.currentTarget;
+        if (element && card) {
+            const rect = card.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const offsetY = e.clientY - rect.top;
+            setDraggingElement({ id, offsetX, offsetY });
+        }
+        e.stopPropagation();
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (draggingElement) {
+            const canvasRect = e.currentTarget.getBoundingClientRect();
+            const newX = e.clientX - canvasRect.left - draggingElement.offsetX;
+            const newY = e.clientY - canvasRect.top - draggingElement.offsetY;
+
+            setElements(prevElements =>
+                prevElements.map(el =>
+                    el.id === draggingElement.id
+                    ? { ...el, position: { x: newX, y: newY } }
+                    : el
+                )
+            );
+        }
+    };
+
+    const handleMouseUp = () => {
+        setDraggingElement(null);
+    };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
       <Card className="lg:col-span-3 h-[75vh] flex flex-col">
         <CardHeader>
           <CardTitle>UML Diagram</CardTitle>
         </CardHeader>
-        <CardContent className="flex-grow relative design-canvas rounded-b-lg">
+        <CardContent 
+          className="flex-grow relative design-canvas rounded-b-lg"
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
           {elements.map((el) => (
             <Card
               key={el.id}
-              className="absolute w-64 shadow-lg"
+              className="absolute w-64 shadow-lg cursor-grab"
               style={{ left: `${el.position.x}px`, top: `${el.position.y}px` }}
+              onMouseDown={(e) => handleMouseDown(e, el.id)}
             >
               <CardHeader className="flex flex-row items-center justify-between p-4 bg-muted/50 rounded-t-lg">
                 <Input
                   value={el.name}
                   onChange={(e) => updateElement(el.id, e.target.value, el.content)}
                   className="text-md font-bold border-none focus-visible:ring-1"
+                  onMouseDown={(e) => e.stopPropagation()} 
                 />
-                <Button variant="ghost" size="icon" onClick={() => deleteElement(el.id)}>
+                <Button variant="ghost" size="icon" onClick={() => deleteElement(el.id)} onMouseDown={(e) => e.stopPropagation()}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent className="p-4">
+              <CardContent className="p-4" onMouseDown={(e) => e.stopPropagation()}>
                 <Textarea
                   placeholder={`- property: type\n+ method(): returnType`}
                   value={el.content}
