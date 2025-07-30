@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { FileText, Puzzle, Package, Trash2, Link2 } from 'lucide-react';
 import type { UmlElement, Relationship } from '@/types';
+import RelationshipLine from './RelationshipLine';
 import {
   Dialog,
   DialogContent,
@@ -160,6 +161,19 @@ export default function UmlDesigner({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
+          {relationships.map((rel) => {
+            const fromElement = elements.find((el) => el.id === rel.from);
+            const toElement = elements.find((el) => el.id === rel.to);
+            if (!fromElement || !toElement) return null;
+            return (
+              <RelationshipLine
+                key={rel.id}
+                fromElement={fromElement}
+                toElement={toElement}
+                relationshipType={rel.type}
+              />
+            );
+          })}
           {elements.map((el) => (
             <Card
               key={el.id}
