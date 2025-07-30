@@ -1,0 +1,227 @@
+'use client';
+
+import type { Dispatch, SetStateAction } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { FileText, Puzzle, Package, Trash2, Link2 } from 'lucide-react';
+import type { UmlElement, Relationship } from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from './ui/label';
+import React from 'react';
+
+interface UmlDesignerProps {
+  elements: UmlElement[];
+  setElements: Dispatch<SetStateAction<UmlElement[]>>;
+  relationships: Relationship[];
+  setRelationships: Dispatch<SetStateAction<Relationship[]>>;
+}
+
+export default function UmlDesigner({
+  elements,
+  setElements,
+  relationships,
+  setRelationships,
+}: UmlDesignerProps) {
+  const addElement = (type: UmlElement['type']) => {
+    const newElement: UmlElement = {
+      id: `${type}-${Date.now()}`,
+      type,
+      name: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      content: '',
+      position: { x: 50, y: 50 },
+    };
+    setElements([...elements, newElement]);
+  };
+
+  const updateElement = (id: string, newName: string, newContent: string) => {
+    setElements(
+      elements.map((el) =>
+        el.id === id ? { ...el, name: newName, content: newContent } : el
+      )
+    );
+  };
+
+  const deleteElement = (id: string) => {
+    setElements(elements.filter((el) => el.id !== id));
+    setRelationships(relationships.filter(rel => rel.from !== id && rel.to !== id));
+  };
+
+  const addRelationship = (from: string, to: string, type: Relationship['type']) => {
+    if (!from || !to || !type) return;
+    const newRelationship: Relationship = {
+      id: `rel-${Date.now()}`,
+      from,
+      to,
+      type,
+    };
+    setRelationships([...relationships, newRelationship]);
+  };
+
+  const deleteRelationship = (id: string) => {
+    setRelationships(relationships.filter((rel) => rel.id !== id));
+  };
+  
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+      <Card className="lg:col-span-3 h-[75vh] flex flex-col">
+        <CardHeader>
+          <CardTitle>UML Diagram</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-grow relative design-canvas rounded-b-lg">
+          {elements.map((el) => (
+            <Card
+              key={el.id}
+              className="absolute w-64 shadow-lg"
+              style={{ left: `${el.position.x}px`, top: `${el.position.y}px` }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between p-4 bg-muted/50 rounded-t-lg">
+                <Input
+                  value={el.name}
+                  onChange={(e) => updateElement(el.id, e.target.value, el.content)}
+                  className="text-md font-bold border-none focus-visible:ring-1"
+                />
+                <Button variant="ghost" size="icon" onClick={() => deleteElement(el.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="p-4">
+                <Textarea
+                  placeholder={`- property: type\n+ method(): returnType`}
+                  value={el.content}
+                  onChange={(e) => updateElement(el.id, el.name, e.target.value)}
+                  className="font-code text-xs h-32 resize-none"
+                />
+              </CardContent>
+            </Card>
+          ))}
+        </CardContent>
+      </Card>
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tools</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <Button onClick={() => addElement('class')}>
+              <FileText className="mr-2 h-4 w-4" /> Add Class
+            </Button>
+            <Button onClick={() => addElement('interface')}>
+              <Puzzle className="mr-2 h-4 w-4" /> Add Interface
+            </Button>
+            <Button onClick={() => addElement('namespace')}>
+              <Package className="mr-2 h-4 w-4" /> Add Namespace
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Relationships</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RelationshipDialog elements={elements} onAddRelationship={addRelationship} />
+            <div className="mt-4 space-y-2">
+              {relationships.map(rel => (
+                <div key={rel.id} className="flex items-center justify-between text-sm p-2 bg-muted rounded-md">
+                   <span>
+                    <b>{elements.find(e => e.id === rel.from)?.name}</b> &rarr; <b>{elements.find(e => e.id === rel.to)?.name}</b>
+                  </span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteRelationship(rel.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function RelationshipDialog({ elements, onAddRelationship }: { elements: UmlElement[], onAddRelationship: (from: string, to: string, type: Relationship['type']) => void }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [from, setFrom] = React.useState('');
+  const [to, setTo] = React.useState('');
+  const [type, setType] = React.useState<Relationship['type']>('association');
+
+  const handleAdd = () => {
+    onAddRelationship(from, to, type);
+    setIsOpen(false);
+    setFrom('');
+    setTo('');
+  }
+
+  return (
+     <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full">
+          <Link2 className="mr-2 h-4 w-4" />
+          Add Relationship
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create a new relationship</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="from" className="text-right">From</Label>
+            <Select onValueChange={setFrom} value={from}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select element" />
+              </SelectTrigger>
+              <SelectContent>
+                {elements.map(el => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="to" className="text-right">To</Label>
+            <Select onValueChange={setTo} value={to}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select element" />
+              </SelectTrigger>
+              <SelectContent>
+                {elements.map(el => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="type" className="text-right">Type</Label>
+            <Select onValueChange={(v) => setType(v as Relationship['type'])} value={type}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="association">Association</SelectItem>
+                <SelectItem value="inheritance">Inheritance</SelectItem>
+                <SelectItem value="implementation">Implementation</SelectItem>
+                <SelectItem value="aggregation">Aggregation</SelectItem>
+                <SelectItem value="composition">Composition</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleAdd}>Add Relationship</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
